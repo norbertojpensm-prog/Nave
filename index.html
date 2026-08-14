@@ -36,603 +36,23 @@
 
     }
 
-  </style>
 
+    /* =========================================
+       OCULTAR BOTÓN VR / AR DE A-FRAME
+       ========================================= */
 
+    .a-enter-vr,
+    .a-enter-vr-button,
+    .a-enter-ar,
+    .a-enter-ar-button {
 
-  <script>
-
-    /*
-    =========================================================
-    COMPONENTE PARA NORMALIZAR EL MODELO
-    =========================================================
-
-    MindAR:
-
-    ancho de la imagen objetivo = 1
-
-    Queremos:
-
-    ancho final del modelo = 1.25
-    */
-
-
-    AFRAME.registerComponent(
-
-      "normalizar-modelo",
-
-      {
-
-        init: function () {
-
-
-          const elemento = this.el;
-
-
-          elemento.addEventListener(
-
-            "model-loaded",
-
-            () => {
-
-
-              /*
-              Esperamos dos cuadros para asegurarnos
-              de que todas las matrices del GLB
-              estén listas.
-              */
-
-
-              requestAnimationFrame(
-
-                () => {
-
-
-                  requestAnimationFrame(
-
-                    () => {
-
-
-                      normalizarModelo(
-                        elemento
-                      );
-
-
-                    }
-
-                  );
-
-
-                }
-
-              );
-
-
-            }
-
-          );
-
-
-        }
-
-      }
-
-    );
-
-
-
-    function normalizarModelo(elemento) {
-
-
-      /*
-      =========================================================
-      CONFIGURACIÓN
-      =========================================================
-      */
-
-
-      const ANCHO_FINAL = 1.25;
-
-
-      const SEPARACION = 0.03;
-
-
-
-      /*
-      Si por alguna razón no pudiéramos
-      medir el modelo, utilizaremos esta
-      escala pequeña de respaldo.
-      */
-
-
-      const ESCALA_RESPALDO = 0.06;
-
-
-
-      /*
-      =========================================================
-      OBTENER EL GLB
-      =========================================================
-      */
-
-
-      const modelo =
-        elemento.getObject3D("mesh");
-
-
-      if (!modelo) {
-
-
-        console.log(
-          "No se encontró el modelo."
-        );
-
-
-        return;
-
-      }
-
-
-
-      /*
-      Primero dejamos la entidad
-      sin transformaciones.
-      */
-
-
-      elemento.object3D.scale.set(
-        1,
-        1,
-        1
-      );
-
-
-      elemento.object3D.position.set(
-        0,
-        0,
-        0
-      );
-
-
-
-      /*
-      Actualizamos todas las matrices.
-      */
-
-
-      elemento.object3D.updateWorldMatrix(
-        true,
-        true
-      );
-
-
-      modelo.updateWorldMatrix(
-        true,
-        true
-      );
-
-
-
-      /*
-      =========================================================
-      CAJA TOTAL
-      =========================================================
-      */
-
-
-      const cajaTotal =
-        new THREE.Box3();
-
-
-      cajaTotal.makeEmpty();
-
-
-
-      /*
-      Necesitamos convertir cada pieza
-      a las coordenadas locales de
-      nuestra entidad.
-      */
-
-
-      const matrizEntidadInversa =
-        new THREE.Matrix4();
-
-
-      matrizEntidadInversa
-        .copy(
-          elemento.object3D.matrixWorld
-        )
-        .invert();
-
-
-
-      let piezasValidas = 0;
-
-
-
-      /*
-      =========================================================
-      RECORRER TODAS LAS PIEZAS
-      =========================================================
-      */
-
-
-      modelo.traverse(
-
-        function (pieza) {
-
-
-          if (
-            !pieza.isMesh ||
-            !pieza.geometry
-          ) {
-
-            return;
-
-          }
-
-
-
-          const geometria =
-            pieza.geometry;
-
-
-
-          /*
-          Calculamos la caja de ESA pieza.
-          */
-
-
-          if (!geometria.boundingBox) {
-
-
-            geometria.computeBoundingBox();
-
-
-          }
-
-
-
-          if (!geometria.boundingBox) {
-
-            return;
-
-          }
-
-
-
-          const cajaPieza =
-            geometria.boundingBox.clone();
-
-
-
-          /*
-          Si está vacía,
-          no nos interesa.
-          */
-
-
-          if (cajaPieza.isEmpty()) {
-
-            return;
-
-          }
-
-
-
-          /*
-          Actualizamos su matriz.
-          */
-
-
-          pieza.updateWorldMatrix(
-            true,
-            false
-          );
-
-
-
-          /*
-          Convertimos la pieza al sistema
-          de coordenadas del modelo.
-          */
-
-
-          const matrizLocal =
-            new THREE.Matrix4();
-
-
-          matrizLocal.multiplyMatrices(
-
-            matrizEntidadInversa,
-
-            pieza.matrixWorld
-
-          );
-
-
-
-          cajaPieza.applyMatrix4(
-            matrizLocal
-          );
-
-
-
-          /*
-          Verificamos que sus valores
-          sean números reales.
-          */
-
-
-          const valores = [
-
-            cajaPieza.min.x,
-            cajaPieza.min.y,
-            cajaPieza.min.z,
-
-            cajaPieza.max.x,
-            cajaPieza.max.y,
-            cajaPieza.max.z
-
-          ];
-
-
-
-          const valida =
-            valores.every(
-              Number.isFinite
-            );
-
-
-
-          if (!valida) {
-
-            return;
-
-          }
-
-
-
-          /*
-          Añadimos esta pieza
-          a la caja total.
-          */
-
-
-          cajaTotal.union(
-            cajaPieza
-          );
-
-
-          piezasValidas++;
-
-
-        }
-
-      );
-
-
-
-      /*
-      =========================================================
-      SI NO PUDIMOS MEDIR
-      =========================================================
-      */
-
-
-      if (
-        piezasValidas === 0 ||
-        cajaTotal.isEmpty()
-      ) {
-
-
-        console.log(
-          "No se pudo medir automáticamente."
-        );
-
-
-        console.log(
-          "Usando escala de respaldo."
-        );
-
-
-        elemento.object3D.scale.set(
-
-          ESCALA_RESPALDO,
-          ESCALA_RESPALDO,
-          ESCALA_RESPALDO
-
-        );
-
-
-        elemento.object3D.position.set(
-
-          0,
-          0,
-          SEPARACION
-
-        );
-
-
-        return;
-
-      }
-
-
-
-      /*
-      =========================================================
-      DIMENSIONES
-      =========================================================
-      */
-
-
-      const tamano =
-        new THREE.Vector3();
-
-
-      cajaTotal.getSize(
-        tamano
-      );
-
-
-
-      const centro =
-        new THREE.Vector3();
-
-
-      cajaTotal.getCenter(
-        centro
-      );
-
-
-
-      /*
-      =========================================================
-      COMPROBAR EL ANCHO
-      =========================================================
-      */
-
-
-      if (
-        !Number.isFinite(tamano.x) ||
-        tamano.x <= 0
-      ) {
-
-
-        elemento.object3D.scale.set(
-
-          ESCALA_RESPALDO,
-          ESCALA_RESPALDO,
-          ESCALA_RESPALDO
-
-        );
-
-
-        return;
-
-      }
-
-
-
-      /*
-      =========================================================
-      CALCULAR ESCALA
-      =========================================================
-
-      ANCHO DEL MODELO:
-
-      1.25 veces el ancho
-      de la imagen objetivo.
-      */
-
-
-      const escala =
-        ANCHO_FINAL /
-        tamano.x;
-
-
-
-      /*
-      Aplicamos la misma escala
-      a X, Y y Z.
-
-      Así NO deformamos la nave.
-      */
-
-
-      elemento.object3D.scale.set(
-
-        escala,
-        escala,
-        escala
-
-      );
-
-
-
-      /*
-      =========================================================
-      CENTRAR MODELO
-      =========================================================
-      */
-
-
-      const posicionX =
-        -centro.x * escala;
-
-
-      const posicionY =
-        -centro.y * escala;
-
-
-
-      /*
-      La parte inferior queda
-      ligeramente encima de
-      la imagen.
-      */
-
-
-      const posicionZ =
-
-        -(cajaTotal.min.z * escala)
-        + SEPARACION;
-
-
-
-      elemento.object3D.position.set(
-
-        posicionX,
-        posicionY,
-        posicionZ
-
-      );
-
-
-
-      /*
-      Información de comprobación.
-      */
-
-
-      console.log(
-        "MODELO NORMALIZADO"
-      );
-
-
-      console.log(
-        "Piezas válidas:",
-        piezasValidas
-      );
-
-
-      console.log(
-        "Tamaño original:",
-        tamano
-      );
-
-
-      console.log(
-        "Ancho final:",
-        ANCHO_FINAL
-      );
-
-
-      console.log(
-        "Escala aplicada:",
-        escala
-      );
-
+      display: none !important;
 
     }
 
-  </script>
-
+  </style>
 
 </head>
-
 
 
 <body>
@@ -640,46 +60,35 @@
 
 <a-scene
 
-  mindar-image="
-    imageTargetSrc: ./targets.mind;
-  "
+  mindar-image="imageTargetSrc: ./targets.mind;"
 
   vr-mode-ui="enabled: false"
 
   device-orientation-permission-ui="enabled: false"
 
-  renderer="
-    colorManagement: true;
-  "
+  renderer="colorManagement: true;"
 
 >
 
 
-  <!-- ======================================= -->
-  <!-- MODELO GLB                              -->
-  <!-- ======================================= -->
-
+  <!-- ========================================= -->
+  <!-- MODELO 3D                                 -->
+  <!-- ========================================= -->
 
   <a-assets>
 
-
     <a-asset-item
-
       id="nave"
-
       src="./nave_trunks.glb">
-
     </a-asset-item>
-
 
   </a-assets>
 
 
 
-  <!-- ======================================= -->
-  <!-- CÁMARA                                  -->
-  <!-- ======================================= -->
-
+  <!-- ========================================= -->
+  <!-- CÁMARA                                    -->
+  <!-- ========================================= -->
 
   <a-camera
 
@@ -691,36 +100,32 @@
 
 
 
-  <!-- ======================================= -->
-  <!-- IMAGEN OBJETIVO                         -->
-  <!-- ======================================= -->
-
+  <!-- ========================================= -->
+  <!-- IMAGEN OBJETIVO                           -->
+  <!-- ========================================= -->
 
   <a-entity
 
-    mindar-image-target="
-      targetIndex: 0;
-    "
+    mindar-image-target="targetIndex: 0"
 
   >
 
 
+    <!-- ======================================= -->
+    <!-- NAVE TRUNKS                             -->
+    <!-- ======================================= -->
 
-    <!-- ===================================== -->
-    <!-- NAVE                                  -->
-    <!-- ===================================== -->
+    <a-gltf-model
 
+      src="#nave"
 
-    <a-entity
+      scale="0.0624 0.0624 0.0624"
 
-      id="modelo"
+      position="0 -0.90 0.08"
 
-      gltf-model="#nave"
+      rotation="0 0 0">
 
-      normalizar-modelo>
-
-    </a-entity>
-
+    </a-gltf-model>
 
 
   </a-entity>
