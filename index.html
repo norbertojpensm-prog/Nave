@@ -12,14 +12,11 @@
 
   <title>Modelo 3D - Realidad Aumentada</title>
 
-
   <!-- A-FRAME -->
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
 
-
   <!-- MINDAR -->
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
-
 
   <style>
 
@@ -27,10 +24,8 @@
     body {
       margin: 0;
       padding: 0;
-
       width: 100%;
       height: 100%;
-
       overflow: hidden;
     }
 
@@ -53,9 +48,7 @@
 >
 
 
-  <!-- ================================================= -->
-  <!-- MODELO 3D                                         -->
-  <!-- ================================================= -->
+  <!-- MODELO 3D -->
 
   <a-assets>
 
@@ -68,9 +61,7 @@
 
 
 
-  <!-- ================================================= -->
-  <!-- CÁMARA                                            -->
-  <!-- ================================================= -->
+  <!-- CÁMARA -->
 
   <a-camera
 
@@ -82,27 +73,17 @@
 
 
 
-  <!-- ================================================= -->
-  <!-- IMAGEN OBJETIVO                                   -->
-  <!-- ================================================= -->
+  <!-- IMAGEN OBJETIVO -->
 
   <a-entity
-
-    id="target"
-
-    mindar-image-target="targetIndex: 0"
-
-  >
+    mindar-image-target="targetIndex: 0">
 
 
     <!-- MODELO -->
 
     <a-entity
-
       id="modelo"
-
       gltf-model="#modelo3D">
-
     </a-entity>
 
 
@@ -115,67 +96,36 @@
 
 <script>
 
-
   /*
-  ========================================================
-  CONFIGURACIÓN
-  ========================================================
+    La imagen objetivo de MindAR
+    tiene un ancho de referencia = 1.
 
-  En MindAR:
-
-  ancho de imagen objetivo = 1
-
-  Nosotros queremos:
-
-  ancho del modelo = 1.25
-
-  Es decir, 125% del ancho de la imagen.
+    Queremos que el modelo tenga
+    un ancho final = 1.25.
   */
-
 
   const ANCHO_MODELO = 1.25;
 
-
   /*
-  Pequeña separación para que el modelo
-  no quede metido dentro de la imagen.
+    Pequeña separación respecto
+    de la página.
   */
 
   const SEPARACION = 0.02;
-
-
-
-  /*
-  ========================================================
-  OBTENER MODELO
-  ========================================================
-  */
 
 
   const modelo =
     document.querySelector("#modelo");
 
 
-
-  /*
-  ========================================================
-  CUANDO TERMINE DE CARGAR EL MODELO
-  ========================================================
-  */
-
-
   modelo.addEventListener(
-
     "model-loaded",
-
     () => {
 
 
       /*
-      Obtenemos el modelo real de Three.js
-      que está dentro de A-Frame.
+        Obtenemos el modelo 3D real.
       */
-
 
       const objeto3D =
         modelo.getObject3D("mesh");
@@ -194,9 +144,8 @@
 
 
       /*
-      Actualizamos sus coordenadas.
+        Actualizamos las coordenadas.
       */
-
 
       objeto3D.updateWorldMatrix(
         true,
@@ -206,21 +155,14 @@
 
 
       /*
-      Creamos una caja invisible alrededor
-      de todo el modelo.
+        Calculamos los límites
+        del modelo completo.
       */
-
 
       const caja =
         new THREE.Box3().setFromObject(
           objeto3D
         );
-
-
-
-      /*
-      Calculamos su tamaño.
-      */
 
 
       const tamano =
@@ -230,12 +172,6 @@
       caja.getSize(
         tamano
       );
-
-
-
-      /*
-      Calculamos el centro.
-      */
 
 
       const centro =
@@ -249,38 +185,19 @@
 
 
       /*
-      ====================================================
-      CALCULAR ESCALA
-      ====================================================
-
-      Ejemplo:
-
-      modelo original = 4 unidades de ancho
-
-      queremos = 1.25
-
-      escala:
-
-      1.25 / 4 = 0.3125
-
-      Esto se calcula automáticamente.
+        Calculamos la escala necesaria
+        para que el ANCHO final sea 1.25.
       */
 
-
       const escala =
-
-        ANCHO_MODELO /
-        tamano.x;
+        ANCHO_MODELO / tamano.x;
 
 
 
       /*
-      Aplicamos la misma escala
-      en X, Y y Z.
-
-      Así NO deformamos el modelo.
+        Aplicamos la misma escala
+        en X, Y y Z para no deformarlo.
       */
-
 
       modelo.object3D.scale.set(
 
@@ -293,38 +210,26 @@
 
 
       /*
-      ====================================================
-      CENTRAR MODELO
-      ====================================================
+        Centramos el modelo
+        sobre la imagen.
       */
 
-
-      const posicionX =
-
-        -centro.x *
-        escala;
+      const x =
+        -centro.x * escala;
 
 
-      const posicionY =
-
-        -centro.y *
-        escala;
+      const y =
+        -centro.y * escala;
 
 
 
       /*
-      ====================================================
-      COLOCARLO ENCIMA DE LA IMAGEN
-      ====================================================
-
-      Tomamos la parte trasera del modelo
-      y la colocamos ligeramente por encima
-      de la imagen objetivo.
+        Colocamos la parte inferior
+        del modelo ligeramente encima
+        de la imagen.
       */
 
-
-      const posicionZ =
-
+      const z =
         -(caja.min.z * escala)
         + SEPARACION;
 
@@ -332,25 +237,15 @@
 
       modelo.object3D.position.set(
 
-        posicionX,
-        posicionY,
-        posicionZ
+        x,
+        y,
+        z
 
       );
 
 
-
-      /*
-      Información para nosotros.
-
-      No aparece en pantalla.
-      Solo sirve si después necesitamos
-      revisar la consola.
-      */
-
-
       console.log(
-        "Modelo cargado correctamente"
+        "Modelo cargado correctamente."
       );
 
 
@@ -366,14 +261,25 @@
       );
 
 
-      console.log(
-        "Escala aplicada:",
-        escala
+    }
+  );
+
+
+  /*
+    Si el GLTF no puede cargar,
+    aparecerá el error en consola.
+  */
+
+  modelo.addEventListener(
+    "model-error",
+    (error) => {
+
+      console.error(
+        "Error cargando el modelo 3D:",
+        error
       );
 
-
     }
-
   );
 
 
