@@ -7,10 +7,10 @@
 
   <meta
     name="viewport"
-    content="width=device-width, initial-scale=1"
+    content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
   >
 
-  <title>Modelo 3D - Realidad Aumentada</title>
+  <title>Realidad Aumentada - Nave Trunks</title>
 
   <!-- A-FRAME -->
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
@@ -18,15 +18,20 @@
   <!-- MINDAR -->
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
+
   <style>
 
     html,
     body {
       margin: 0;
       padding: 0;
+
       width: 100%;
       height: 100%;
+
       overflow: hidden;
+
+      background: black;
     }
 
   </style>
@@ -45,23 +50,29 @@
 
   device-orientation-permission-ui="enabled: false"
 
+  renderer="colorManagement: true;"
+
 >
 
 
-  <!-- MODELO 3D -->
+  <!-- ============================================= -->
+  <!-- RECURSOS                                      -->
+  <!-- ============================================= -->
 
   <a-assets>
 
     <a-asset-item
       id="modelo3D"
-      src="./scene.gltf">
+      src="./nave_trunks.glb">
     </a-asset-item>
 
   </a-assets>
 
 
 
-  <!-- CÁMARA -->
+  <!-- ============================================= -->
+  <!-- CÁMARA                                        -->
+  <!-- ============================================= -->
 
   <a-camera
 
@@ -73,17 +84,25 @@
 
 
 
-  <!-- IMAGEN OBJETIVO -->
+  <!-- ============================================= -->
+  <!-- IMAGEN OBJETIVO                               -->
+  <!-- ============================================= -->
 
   <a-entity
-    mindar-image-target="targetIndex: 0">
+
+    mindar-image-target="targetIndex: 0"
+
+  >
 
 
-    <!-- MODELO -->
+    <!-- MODELO 3D -->
 
     <a-entity
+
       id="modelo"
+
       gltf-model="#modelo3D">
+
     </a-entity>
 
 
@@ -96,35 +115,59 @@
 
 <script>
 
-  /*
-    La imagen objetivo de MindAR
-    tiene un ancho de referencia = 1.
 
-    Queremos que el modelo tenga
-    un ancho final = 1.25.
+  /*
+  =====================================================
+  CONFIGURACIÓN
+  =====================================================
+
+  MindAR considera:
+
+  ancho de imagen objetivo = 1
+
+  Nosotros queremos:
+
+  ancho del modelo = 1.25
+
+  Así el modelo sobresale ligeramente
+  respecto de la imagen.
   */
+
 
   const ANCHO_MODELO = 1.25;
 
+
   /*
-    Pequeña separación respecto
-    de la página.
+  Separación respecto de la superficie
+  de la imagen.
   */
 
   const SEPARACION = 0.02;
 
 
+
+  /*
+  Obtenemos el modelo.
+  */
+
   const modelo =
     document.querySelector("#modelo");
 
 
+
+  /*
+  Esperamos a que el GLB termine de cargar.
+  */
+
   modelo.addEventListener(
+
     "model-loaded",
+
     () => {
 
 
       /*
-        Obtenemos el modelo 3D real.
+      Obtenemos el objeto 3D interno.
       */
 
       const objeto3D =
@@ -144,7 +187,7 @@
 
 
       /*
-        Actualizamos las coordenadas.
+      Actualizamos su geometría.
       */
 
       objeto3D.updateWorldMatrix(
@@ -155,8 +198,8 @@
 
 
       /*
-        Calculamos los límites
-        del modelo completo.
+      Creamos una caja invisible
+      alrededor de todo el modelo.
       */
 
       const caja =
@@ -164,6 +207,11 @@
           objeto3D
         );
 
+
+
+      /*
+      Calculamos sus dimensiones.
+      */
 
       const tamano =
         new THREE.Vector3();
@@ -173,6 +221,11 @@
         tamano
       );
 
+
+
+      /*
+      Calculamos el centro del modelo.
+      */
 
       const centro =
         new THREE.Vector3();
@@ -185,8 +238,32 @@
 
 
       /*
-        Calculamos la escala necesaria
-        para que el ANCHO final sea 1.25.
+      Comprobamos que tenga
+      un ancho válido.
+      */
+
+      if (
+        !Number.isFinite(tamano.x) ||
+        tamano.x <= 0
+      ) {
+
+        console.error(
+          "El modelo tiene un ancho no válido."
+        );
+
+        return;
+
+      }
+
+
+
+      /*
+      =====================================================
+      ESCALA AUTOMÁTICA
+      =====================================================
+
+      Calculamos cuánto hay que escalarlo
+      para que su ancho final sea 1.25.
       */
 
       const escala =
@@ -195,8 +272,10 @@
 
 
       /*
-        Aplicamos la misma escala
-        en X, Y y Z para no deformarlo.
+      Aplicamos exactamente la misma escala
+      a X, Y y Z.
+
+      El modelo conserva sus proporciones.
       */
 
       modelo.object3D.scale.set(
@@ -210,26 +289,28 @@
 
 
       /*
-        Centramos el modelo
-        sobre la imagen.
+      =====================================================
+      CENTRADO
+      =====================================================
       */
 
-      const x =
+      const posicionX =
         -centro.x * escala;
 
 
-      const y =
+      const posicionY =
         -centro.y * escala;
 
 
 
       /*
-        Colocamos la parte inferior
-        del modelo ligeramente encima
-        de la imagen.
+      =====================================================
+      COLOCAR MODELO ENCIMA DE LA IMAGEN
+      =====================================================
       */
 
-      const z =
+      const posicionZ =
+
         -(caja.min.z * escala)
         + SEPARACION;
 
@@ -237,15 +318,16 @@
 
       modelo.object3D.position.set(
 
-        x,
-        y,
-        z
+        posicionX,
+        posicionY,
+        posicionZ
 
       );
 
 
+
       console.log(
-        "Modelo cargado correctamente."
+        "Nave Trunks cargada correctamente."
       );
 
 
@@ -261,25 +343,36 @@
       );
 
 
+      console.log(
+        "Escala aplicada:",
+        escala
+      );
+
+
     }
+
   );
 
 
+
   /*
-    Si el GLTF no puede cargar,
-    aparecerá el error en consola.
+  Si el GLB no carga,
+  aparecerá un error en consola.
   */
 
   modelo.addEventListener(
+
     "model-error",
+
     (error) => {
 
       console.error(
-        "Error cargando el modelo 3D:",
+        "Error cargando nave_trunks.glb:",
         error
       );
 
     }
+
   );
 
 
