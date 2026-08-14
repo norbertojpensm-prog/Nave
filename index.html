@@ -10,10 +10,12 @@
     content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
   >
 
-  <title>Realidad Aumentada - Nave Trunks</title>
+  <title>Nave Trunks - Realidad Aumentada</title>
+
 
   <!-- A-FRAME -->
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+
 
   <!-- MINDAR -->
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
@@ -23,6 +25,7 @@
 
     html,
     body {
+
       margin: 0;
       padding: 0;
 
@@ -31,7 +34,36 @@
 
       overflow: hidden;
 
-      background: black;
+    }
+
+
+    #estado {
+
+      position: fixed;
+
+      top: 15px;
+      left: 50%;
+
+      transform: translateX(-50%);
+
+      z-index: 9999;
+
+      padding: 10px 15px;
+
+      border-radius: 10px;
+
+      background: rgba(0,0,0,0.75);
+
+      color: white;
+
+      font-family: Arial, sans-serif;
+
+      font-size: 14px;
+
+      text-align: center;
+
+      white-space: nowrap;
+
     }
 
   </style>
@@ -42,27 +74,40 @@
 <body>
 
 
+<div id="estado">
+
+  Cargando nave 3D...
+
+</div>
+
+
+
 <a-scene
 
   mindar-image="imageTargetSrc: ./targets.mind;"
+
+  color-space="sRGB"
+
+  renderer="
+    colorManagement: true;
+    physicallyCorrectLights: true;
+  "
 
   vr-mode-ui="enabled: false"
 
   device-orientation-permission-ui="enabled: false"
 
-  renderer="colorManagement: true;"
-
 >
 
 
-  <!-- ============================================= -->
-  <!-- RECURSOS                                      -->
-  <!-- ============================================= -->
+  <!-- ================================ -->
+  <!-- ARCHIVO GLB                      -->
+  <!-- ================================ -->
 
   <a-assets>
 
     <a-asset-item
-      id="modelo3D"
+      id="nave3D"
       src="./nave_trunks.glb">
     </a-asset-item>
 
@@ -70,9 +115,27 @@
 
 
 
-  <!-- ============================================= -->
-  <!-- CÁMARA                                        -->
-  <!-- ============================================= -->
+  <!-- ================================ -->
+  <!-- LUCES                            -->
+  <!-- ================================ -->
+
+  <a-light
+    type="ambient"
+    intensity="1.5">
+  </a-light>
+
+
+  <a-light
+    type="directional"
+    intensity="1.5"
+    position="1 2 1">
+  </a-light>
+
+
+
+  <!-- ================================ -->
+  <!-- CÁMARA                           -->
+  <!-- ================================ -->
 
   <a-camera
 
@@ -84,24 +147,54 @@
 
 
 
-  <!-- ============================================= -->
-  <!-- IMAGEN OBJETIVO                               -->
-  <!-- ============================================= -->
+  <!-- ================================ -->
+  <!-- IMAGEN OBJETIVO                  -->
+  <!-- ================================ -->
 
   <a-entity
+
+    id="target"
 
     mindar-image-target="targetIndex: 0"
 
   >
 
 
-    <!-- MODELO 3D -->
+
+    <!--
+      TEST ROJO
+
+      Si aparece este cubito,
+      significa que MindAR sí
+      reconoció correctamente
+      la imagen.
+    -->
+
+    <a-box
+
+      position="-0.40 0 0.05"
+
+      width="0.08"
+
+      height="0.08"
+
+      depth="0.08"
+
+      color="red">
+
+    </a-box>
+
+
+
+    <!-- ============================== -->
+    <!-- NAVE                           -->
+    <!-- ============================== -->
 
     <a-entity
 
       id="modelo"
 
-      gltf-model="#modelo3D">
+      gltf-model="#nave3D">
 
     </a-entity>
 
@@ -117,47 +210,44 @@
 
 
   /*
-  =====================================================
+  ==========================================================
   CONFIGURACIÓN
-  =====================================================
+  ==========================================================
 
-  MindAR considera:
+  Ahora usamos la dimensión MÁS GRANDE
+  de la nave.
 
-  ancho de imagen objetivo = 1
-
-  Nosotros queremos:
-
-  ancho del modelo = 1.25
-
-  Así el modelo sobresale ligeramente
-  respecto de la imagen.
+  Esto evita problemas si la nave fue
+  diseñada apuntando hacia X, Y o Z.
   */
 
 
-  const ANCHO_MODELO = 1.25;
+  const TAMANO_MODELO = 1.25;
 
 
-  /*
-  Separación respecto de la superficie
-  de la imagen.
-  */
-
-  const SEPARACION = 0.02;
-
-
-
-  /*
-  Obtenemos el modelo.
-  */
 
   const modelo =
     document.querySelector("#modelo");
 
 
+  const target =
+    document.querySelector("#target");
+
+
+  const estado =
+    document.querySelector("#estado");
+
+
+  let modeloCargado = false;
+
+
 
   /*
-  Esperamos a que el GLB termine de cargar.
+  ==========================================================
+  MODELO CARGADO
+  ==========================================================
   */
+
 
   modelo.addEventListener(
 
@@ -166,29 +256,22 @@
     () => {
 
 
-      /*
-      Obtenemos el objeto 3D interno.
-      */
-
       const objeto3D =
         modelo.getObject3D("mesh");
 
 
       if (!objeto3D) {
 
-        console.error(
-          "No se pudo encontrar el modelo 3D."
-        );
+
+        estado.textContent =
+          "ERROR: no se encontró la geometría";
+
 
         return;
 
       }
 
 
-
-      /*
-      Actualizamos su geometría.
-      */
 
       objeto3D.updateWorldMatrix(
         true,
@@ -198,8 +281,8 @@
 
 
       /*
-      Creamos una caja invisible
-      alrededor de todo el modelo.
+      Creamos una caja alrededor
+      de toda la nave.
       */
 
       const caja =
@@ -210,7 +293,7 @@
 
 
       /*
-      Calculamos sus dimensiones.
+      Obtenemos las dimensiones.
       */
 
       const tamano =
@@ -224,7 +307,7 @@
 
 
       /*
-      Calculamos el centro del modelo.
+      Obtenemos el centro.
       */
 
       const centro =
@@ -238,18 +321,30 @@
 
 
       /*
-      Comprobamos que tenga
-      un ancho válido.
+      Elegimos LA DIMENSIÓN MÁS GRANDE.
+
+      Así no importa cómo esté orientado
+      originalmente el modelo.
       */
 
+      const dimensionMayor =
+        Math.max(
+          tamano.x,
+          tamano.y,
+          tamano.z
+        );
+
+
+
       if (
-        !Number.isFinite(tamano.x) ||
-        tamano.x <= 0
+        !Number.isFinite(dimensionMayor) ||
+        dimensionMayor <= 0
       ) {
 
-        console.error(
-          "El modelo tiene un ancho no válido."
-        );
+
+        estado.textContent =
+          "ERROR: tamaño del modelo inválido";
+
 
         return;
 
@@ -258,25 +353,20 @@
 
 
       /*
-      =====================================================
-      ESCALA AUTOMÁTICA
-      =====================================================
+      ======================================================
+      ESCALA
+      ======================================================
 
-      Calculamos cuánto hay que escalarlo
-      para que su ancho final sea 1.25.
+      La dimensión más grande de la nave
+      terminará midiendo 1.25.
       */
+
 
       const escala =
-        ANCHO_MODELO / tamano.x;
+        TAMANO_MODELO /
+        dimensionMayor;
 
 
-
-      /*
-      Aplicamos exactamente la misma escala
-      a X, Y y Z.
-
-      El modelo conserva sus proporciones.
-      */
 
       modelo.object3D.scale.set(
 
@@ -289,62 +379,39 @@
 
 
       /*
-      =====================================================
-      CENTRADO
-      =====================================================
+      ======================================================
+      CENTRAR
+      ======================================================
       */
-
-      const posicionX =
-        -centro.x * escala;
-
-
-      const posicionY =
-        -centro.y * escala;
-
-
-
-      /*
-      =====================================================
-      COLOCAR MODELO ENCIMA DE LA IMAGEN
-      =====================================================
-      */
-
-      const posicionZ =
-
-        -(caja.min.z * escala)
-        + SEPARACION;
-
 
 
       modelo.object3D.position.set(
 
-        posicionX,
-        posicionY,
-        posicionZ
+        -centro.x * escala,
+
+        -centro.y * escala,
+
+        0.15 - centro.z * escala
 
       );
 
 
 
+      modeloCargado = true;
+
+
+      estado.textContent =
+        "Nave cargada ✓ — busca la imagen";
+
+
       console.log(
-        "Nave Trunks cargada correctamente."
+        "Tamaño nave:",
+        tamano
       );
 
 
       console.log(
-        "Ancho original:",
-        tamano.x
-      );
-
-
-      console.log(
-        "Ancho final:",
-        ANCHO_MODELO
-      );
-
-
-      console.log(
-        "Escala aplicada:",
+        "Escala:",
         escala
       );
 
@@ -356,9 +423,11 @@
 
 
   /*
-  Si el GLB no carga,
-  aparecerá un error en consola.
+  ==========================================================
+  ERROR DEL GLB
+  ==========================================================
   */
+
 
   modelo.addEventListener(
 
@@ -366,10 +435,93 @@
 
     (error) => {
 
+
+      estado.textContent =
+        "ERROR: nave_trunks.glb no pudo cargar";
+
+
       console.error(
-        "Error cargando nave_trunks.glb:",
         error
       );
+
+
+    }
+
+  );
+
+
+
+  /*
+  ==========================================================
+  IMAGEN ENCONTRADA
+  ==========================================================
+  */
+
+
+  target.addEventListener(
+
+    "targetFound",
+
+    () => {
+
+
+      if (modeloCargado) {
+
+
+        estado.textContent =
+          "Imagen detectada ✓ — Nave cargada ✓";
+
+
+      }
+
+      else {
+
+
+        estado.textContent =
+          "Imagen detectada ✓ — esperando nave...";
+
+
+      }
+
+
+    }
+
+  );
+
+
+
+  /*
+  ==========================================================
+  IMAGEN PERDIDA
+  ==========================================================
+  */
+
+
+  target.addEventListener(
+
+    "targetLost",
+
+    () => {
+
+
+      if (modeloCargado) {
+
+
+        estado.textContent =
+          "Nave cargada ✓ — busca la imagen";
+
+
+      }
+
+      else {
+
+
+        estado.textContent =
+          "Buscando imagen...";
+
+
+      }
+
 
     }
 
